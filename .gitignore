@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Training results (large)
+epymarl/results/
+results/
+
+# Third-party repos (not ours)
+BenchMARL/
+CoMLRL/
+GS-MARL/
+MAGNet/
+MARL-Algorithms/
+MARLIN/
+Qedgix/
+UAV_BS_CTRL/
+VIKI-R/
+VMAS/
+XMIX/
+YOLO-MARL/
+pymarl_LLM/
+pymarlzooplus/
+pytorch_DGN/
+ggSwarm/
+
+# IDE
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,36 @@
+# --- GCAN (GAT Credit Assignment Network) for MPE environments ---
+# Replaces QMIX hypernetwork with GAT attention-driven credit assignment.
+#
+# Key differences from qmix_mpe.yaml:
+#   mixer: "gcan" (not "qmix")
+#   gat_n_heads: 4 (new hyperparameter)
+
+action_selector: "epsilon_greedy"
+epsilon_start: 1.0
+epsilon_finish: 0.05
+epsilon_anneal_time: 50000
+evaluation_epsilon: 0.0
+
+runner: "episode"
+
+buffer_size: 5000
+
+# RES paper: MPE needs 800, not SMAC default 200
+target_update_interval_or_tau: 800
+
+obs_agent_id: True
+obs_last_action: False
+obs_individual_obs: False
+
+standardise_returns: False
+standardise_rewards: True
+
+agent_output_type: "q"
+learner: "q_learner"
+double_q: True
+mixer: "gcan"
+use_rnn: False
+mixing_embed_dim: 32
+gat_n_heads: 4
+
+name: "gcan"
