@@ -68,6 +68,9 @@ GNN-LLM-MARL协同优化框架/
 │               ├── mpe_simple_spread.yaml
 │               └── mpe_simple_spread_n5.yaml
 │
+├── docs/                        ← 文献分析与设计文档
+│   └── 文献综述与可行性分析.md
+│
 ├── plan/                        ← 项目规划文档
 │   └── Q1-Q3实施计划.md
 │
