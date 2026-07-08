@@ -266,7 +266,68 @@ pytest tests/ -v
 
 ---
 
-## 七、关键设计决策记录
+## 七、基准测试策略与有效性证明
+
+### 7.1 无法对标外部 SOTA 的原因
+
+MPE SimpleSpread 在不同框架中的 reward 实现差异巨大（搜索结论）：
+
+| 来源 | 框架 | N | QMIX 收敛值 |
+|------|------|---|------------|
+| CSDN 学生作业 | PyMARL (oxwhirl) | 3 | **-5.0** |
+| UTS 硕士论文 | MARLlib | 3 | **-136.6** |
+| on-policy issue | marlbenchmark | 2-3 | **-800~-1300** |
+| **我们** | **EPyMARL** | **5** | **崩溃** |
+
+同一任务三个量级（-5 vs -137 vs -1000），原因：
+
+1. **max_cycles 不同**：EPyMARL 用 100，PettingZoo 默认 25 → 4x 累积步数
+2. **local_ratio 不同**：global/local reward 混合比例影响每步 reward
+3. **reward 聚合不同**：common_reward="sum"/"mean"，每步是否平均到 agent 数
+4. **standardise_rewards**：EPyMARL 默认标准化，但 logged return 是原始空间
+5. **PettingZoo vs 原始 MPE wrapper**：EPyMARL 用 PettingZoo gymma wrapper，PyMARL 用自有 wrapper
+
+**结论：跨框架外部分数完全不可比。唯一有效的是同框架内部对照。**
+
+### 7.2 内部基准方案（四层证明链）
+
+```
+Layer 1: 存活证明 — GCAN vs QMIX (N=5)
+  QMIX: 过估计崩溃 (q_taken 30+, grad_norm 38000+)
+  GCAN: 稳定收敛 (q_taken 2.36, grad_norm 0.5~5)
+  → 证明 GCAN 解决了单调信用分配的过估计问题
+
+Layer 2: 有效性证明 — GCAN vs VDN (N=5)
+  VDN: 简单求和 (无信用分配)
+  GCAN: GAT 注意力信用分配
+  → 验证注意力驱动的分配是否优于简单求和
+
+Layer 3: 消融证明 — GCAN vs GCAN-no-V(s) (N=5)
+  验证状态值基线 V(s) 的边际贡献
+
+Layer 4: 扩展性证据 — N=3 vs N=5 vs N=8
+  N=3: GCAN≈QMIX≈VDN (小规模不需要复杂信用分配)
+  N=5: GCAN > VDN, QMIX 崩溃 (信用分配开始重要)
+  N=8: GCAN >> VDN, QMIX 崩溃 (预期)
+  → 证明 GCAN 的优势随 agent 数增加而扩大
+```
+
+### 7.3 竞争对手分数（仅供参考，不可直接对标）
+
+MARLlib 在 SimpleSpread N=3 上的结果（来源：UTS 硕士论文 Table 5.3）：
+
+| 算法 | 回报 | 类型 |
+|------|------|------|
+| MAPPO | **-47.63** | 策略梯度 (best) |
+| VDN | -105.5 | 值分解 |
+| QMIX | **-136.57** | 值分解 |
+| IQL | -197.41 | 独立学习 |
+
+**注意**：QMIX 在 MARLlib 上也比 VDN 差（-136 vs -105），说明 SimpleSpread 场景下 QMIX 的单调假设本身就是劣势。这与我们的 QMIX 崩溃观察一致。
+
+---
+
+## 八、关键设计决策记录
 
 1. **图建在 Mixer 中而非环境中**：图是信用分配的内部表示，不应暴露给环境
 2. **全连接图 + GAT 自然稀疏化**：避免手工设计边类型，GAT 注意力自动学习重要边
@@ -274,3 +335,4 @@ pytest tests/ -v
 4. **GAT 层 1 多头→层 2 单头**：层 1 捕获多种交互模式，层 2 聚合为标量信用
 5. **obs=None 向后兼容**：GCANMixer 接口兼容 QMIX，方便对比实验
 6. **不并行训练**：单种子充分利用 GPU，总耗时更优（3×11h vs 3×55h 并行）
+7. **内部对照代替外部对标**：跨框架 reward 不可比，用 VDN 和消融构建证明链
